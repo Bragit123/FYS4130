@@ -1,2 +1,1 @@
-FYS4130 - Statistical mechanics
-# FYS4130
+# FYS4130 - Statistical mechanics
