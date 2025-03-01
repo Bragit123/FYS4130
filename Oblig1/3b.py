@@ -1,25 +1,13 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from numba import njit
 
+## Set constants
 alpha = 1
 gamma = 10
 V = 1
 T = 1
 
-# def find_F(Nx, Ny, Nz):
-#     Nvals = [Nx, Ny, Nz]
-#     Nilog = 0
-#     cross_terms = 0
-#     for i in range(3):
-#         Ni = Nvals[i]
-#         Nii = Nvals[(i+1) % 3]
-#         Niii = Nvals[(i+2) % 3]
-#         Nilog += Ni*np.log(alpha*Ni/V)
-#         cross_terms += Nii*Niii
-#     ans = T * (Nilog + gamma/V * cross_terms)
-#     return ans
-
+## Function for finding F
 def find_F(nx, ny, nz):
     nvals = [nx, ny, nz]
     nilog = 0
@@ -33,6 +21,23 @@ def find_F(nx, ny, nz):
     ans = T*V * (nilog + gamma * cross_terms)
     return ans
 
+## Function for finding mu
+def mui(nx, ny, nz, i):
+    # i = 0,1,2 for mux,muy,muz
+    ni = [nx, ny, nz]
+    ans = 1
+    for j in range(3):
+        if j == i:
+            ans += np.log(alpha * ni[j])
+        else:
+            ans += gamma * ni[j]
+    return T * ans
+
+## Function for finding P
+def find_P(nx, ny, nz):
+    return T * (nx + ny + nz + gamma*(nx*ny + ny*nz + nz*nx))
+
+## Define region of n to consider, and create arrays
 num_points = 100
 nlow = 0.25
 nhigh = 0.35
@@ -45,6 +50,7 @@ ni_vals = [nx_vals, ny_vals, nz_vals]
 
 grid_size = 1000
 
+## Find nx, ny, nz and F at equilibrium
 for i in range(num_points):
     n = n_vals[i]
     nxy_range = np.linspace(n/1000, n/10, grid_size)
@@ -62,13 +68,8 @@ for i in range(num_points):
     ni_vals[0][i] = nx_eq
     ni_vals[1][i] = ny_eq
     ni_vals[2][i] = nz_eq
-    # nx_vals[i] = nx_eq
-    # ny_vals[i] = ny_eq
-    # nz_vals[i] = nz_eq
 
-# ddF = np.gradient(np.gradient(F))
-
-# Locate phase transition from instabillity
+## Locate phase transition from instabillity
 ddF_n = np.gradient(np.gradient(F_vals))
 trans_ind = np.argwhere(ddF_n <= 0)
 trans_start_ind = trans_ind[0]
@@ -79,25 +80,37 @@ n_trans_end = n_vals[trans_end_ind]
 pre_trans_ind = np.arange(trans_start_ind[0])
 post_trans_ind = np.arange(trans_end_ind[0], num_points)
 
-# Values before phase transition
+## Values before phase transition
 n_pre = n_vals[pre_trans_ind]
 nx_pre = nx_vals[pre_trans_ind]
 ny_pre = ny_vals[pre_trans_ind]
 nz_pre = nz_vals[pre_trans_ind]
 
-# Values after phase transition
+## Values after phase transition
 n_post = n_vals[post_trans_ind]
 nx_post = nx_vals[post_trans_ind]
 ny_post = ny_vals[post_trans_ind]
 nz_post = nz_vals[post_trans_ind]
 
+## Pressure
+P_vals = find_P(nx_vals, ny_vals, nz_vals)
+
+## Chemical potential
+mux = mui(nx_vals, ny_vals, nz_vals, 0)
+muy = mui(nx_vals, ny_vals, nz_vals, 1)
+muz = mui(nx_vals, ny_vals, nz_vals, 2)
+mu = mux + muy + muz
+
+## Make plots
 plt.figure()
 plt.title("$F(n)$ at equilibrium")
 plt.xlabel("$n=N/V$")
 plt.ylabel("$F$")
 plt.plot(n_vals, F_vals)
-# plt.plot(n_vals, np.gradient(F_vals), "g")
-plt.savefig("F_n.pdf")
+plt.axvline(n_trans_start, linestyle="dashed", color="black")
+plt.axvline(n_trans_end, linestyle="dashed", color="black")
+plt.savefig("Figures_3b/F_n.pdf")
+
 
 plt.figure()
 plt.title("Second derivative of $F(n)$ at equilibrium")
@@ -107,7 +120,8 @@ plt.plot(n_vals, ddF_n)
 plt.axhline(0, linestyle="dashed", color="black")
 plt.axvline(n_trans_start, linestyle="dashed", color="black")
 plt.axvline(n_trans_end, linestyle="dashed", color="black")
-plt.savefig("ddF_n.pdf")
+plt.savefig("Figures_3b/ddF_n.pdf")
+
 
 plt.figure()
 plt.title("Number of each rod $n_i$ at equilibrium")
@@ -119,57 +133,23 @@ plt.plot(n_vals, nz_vals, linestyle="solid", color="green", label="$n_z$")
 plt.axvline(n_trans_start, linestyle="dashed", color="black")
 plt.axvline(n_trans_end, linestyle="dashed", color="black")
 plt.legend()
-plt.savefig("ni_n.pdf")
-
-# nz_sort_ind = np.argsort(nz_vals)
-# dF_dnz_sort = np.gradient(F_vals[nz_sort_ind], nz_vals[nz_sort_ind])
-# plt.figure()
-# plt.title("Derivative of $F(n_z)$")
-# plt.xlabel("$n_z$")
-# plt.ylabel("$\\frac{dF}{dn_z}$")
-# plt.plot(n_vals[nz_sort_ind], dF_dnz_sort, linestyle="solid", color="blue", label="$\\frac{dF}{dn_z}$")
-# # plt.plot(n_vals, ny_vals, linestyle="dashed", color="red", label="$n_y$")
-# # plt.plot(n_vals, nz_vals, linestyle="solid", color="green", label="$n_z$")
-# plt.axvline(n_trans_start, linestyle="dashed", color="black")
-# plt.axvline(n_trans_end, linestyle="dashed", color="black")
-# plt.legend()
-# plt.savefig("dF_nz.pdf")
-
-nx_pre_mean = np.mean(nx_pre)
-ny_pre_mean = np.mean(ny_pre)
-nz_pre_mean = np.mean(nz_pre)
+plt.savefig("Figures_3b/ni_n.pdf")
 
 
-def mui(nx, ny, nz, i):
-    ni = [nx, ny, nz]
-    ans = 1
-    for j in range(3):
-        if j == i:
-            ans += np.log(alpha * ni[j])
-        else:
-            ans += gamma * ni[j]
-    return T * ans
-
-mux = mui(nx_vals, ny_vals, nz_vals, 0)
-muy = mui(nx_vals, ny_vals, nz_vals, 1)
-muz = mui(nx_vals, ny_vals, nz_vals, 2)
-
+mu_start_ind = trans_start_ind[0]-5
 plt.figure()
 plt.title("Chemical potential of each rod orientation")
 plt.xlabel("$n$")
 plt.ylabel("$\\mu_i$")
-plt.plot(n_vals, mux, linestyle="solid", color="blue", label="$\\mu_x$")
-plt.plot(n_vals, muy, linestyle="dashed", color="red", label="$\\mu_y$")
-plt.plot(n_vals, muz, linestyle="solid", color="green", label="$\\mu_z$")
+plt.plot(n_vals[mu_start_ind:], mu[mu_start_ind:], linestyle="solid", color="blue", label="$\\mu$")
+# plt.plot(n_vals[mu_start_ind], mux[mu_start_ind], linestyle="solid", color="blue", label="$\\mu_x$")
+# plt.plot(n_vals[mu_start_ind], muy[mu_start_ind], linestyle="dashed", color="red", label="$\\mu_y$")
+# plt.plot(n_vals[mu_start_ind], muz[mu_start_ind], linestyle="solid", color="green", label="$\\mu_z$")
 plt.axvline(n_trans_start, linestyle="dashed", color="black")
 plt.axvline(n_trans_end, linestyle="dashed", color="black")
 plt.legend()
-plt.savefig("mui_n.pdf")
+plt.savefig("Figures_3b/mui_n.pdf")
 
-def find_P(nx, ny, nz):
-    return T * (nx + ny + nz + gamma*(nx*ny + ny*nz + nz*nx))
-
-P_vals = find_P(nx_vals, ny_vals, nz_vals)
 
 plt.figure()
 plt.title("Pressure at equilibrium")
@@ -179,7 +159,8 @@ plt.plot(n_vals, P_vals, linestyle="solid", color="blue", label="$P$")
 plt.axvline(n_trans_start, linestyle="dashed", color="black")
 plt.axvline(n_trans_end, linestyle="dashed", color="black")
 plt.legend()
-plt.savefig("P_n.pdf")
+plt.savefig("Figures_3b/P_n.pdf")
+
 
 plt.figure()
 plt.title("Chemical potential of each rod orientation")
@@ -191,4 +172,13 @@ plt.plot(muz, n_vals, linestyle="solid", color="green", label="$\\mu_z$")
 plt.axhline(n_trans_start, linestyle="dashed", color="black")
 plt.axhline(n_trans_end, linestyle="dashed", color="black")
 plt.legend()
-plt.savefig("n_mui.pdf")
+plt.savefig("Figures_3b/n_mui.pdf")
+
+
+G_new = F_vals + P_vals*V
+plt.figure()
+plt.title("Gibbs free energy")
+plt.xlabel("$n$")
+plt.ylabel("$G$")
+plt.plot(n_vals, G_new)
+plt.savefig("Figures_3b/G_n.pdf")
