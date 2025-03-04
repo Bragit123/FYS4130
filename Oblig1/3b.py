@@ -41,7 +41,7 @@ def find_P(nx, ny, nz):
 num_points = 100
 # nlow = 0.01
 nlow = 0.25
-# nhigh = 0.99
+# nhigh = 0.4
 nhigh = 0.35
 n_vals = np.linspace(nlow, nhigh, num_points)
 F_vals = np.zeros(num_points)
@@ -55,7 +55,7 @@ grid_size = 1000
 ## Find nx, ny, nz and F at equilibrium
 for i in range(num_points):
     n = n_vals[i]
-    nxy_range = np.linspace(n/1000, n/10, grid_size)
+    nxy_range = np.linspace(n/1000, n/3, grid_size)
     nx, ny = np.meshgrid(nxy_range, nxy_range)
     nz = n-nx-ny
     Fi = find_F(nx, ny, nz)
@@ -81,6 +81,9 @@ n_trans_start = n_vals[trans_start_ind]
 n_trans_end = n_vals[trans_end_ind]
 pre_trans_ind = np.arange(trans_start_ind[0])
 post_trans_ind = np.arange(trans_end_ind[0], num_points)
+
+print(f"Phase transition starts at n = {n_trans_start}.")
+print(f"Phase transition ends at n = {n_trans_end}.")
 
 ## Values before phase transition
 n_pre = n_vals[pre_trans_ind]
@@ -138,15 +141,19 @@ plt.legend()
 plt.savefig("Figures_3b/ni_n.pdf")
 
 
-mu_start_ind = trans_start_ind[0]-5
+# mu_start_ind = trans_start_ind[0]-20
+mu_start_ind = 0
 plt.figure()
 plt.title("Chemical potential of each rod orientation")
 plt.xlabel("$n$")
 plt.ylabel("$\\mu_i$")
 # plt.plot(n_vals[mu_start_ind:], mu[mu_start_ind:], linestyle="solid", color="blue", label="$\\mu$")
-plt.plot(n_vals[mu_start_ind:], mux[mu_start_ind:], linestyle="solid", color="blue", label="$\\mu_x$")
-plt.plot(n_vals[mu_start_ind:], muy[mu_start_ind:], linestyle="dashed", color="red", label="$\\mu_y$")
-plt.plot(n_vals[mu_start_ind:], muz[mu_start_ind:], linestyle="solid", color="green", label="$\\mu_z$")
+plt.plot(n_vals, mux, linestyle="solid", color="blue", label="$\\mu_x$")
+plt.plot(n_vals, muy, linestyle="dashed", color="red", label="$\\mu_y$")
+plt.plot(n_vals, muz, linestyle="solid", color="green", label="$\\mu_z$")
+# plt.plot(n_vals[mu_start_ind:], mux[mu_start_ind:], linestyle="solid", color="blue", label="$\\mu_x$")
+# plt.plot(n_vals[mu_start_ind:], muy[mu_start_ind:], linestyle="dashed", color="red", label="$\\mu_y$")
+# plt.plot(n_vals[mu_start_ind:], muz[mu_start_ind:], linestyle="solid", color="green", label="$\\mu_z$")
 plt.axvline(n_trans_start, linestyle="dashed", color="black")
 plt.axvline(n_trans_end, linestyle="dashed", color="black")
 plt.legend()
@@ -168,9 +175,9 @@ plt.figure()
 plt.title("Chemical potential of each rod orientation")
 plt.xlabel("$\\mu_i$")
 plt.ylabel("$n$")
-plt.plot(mux, n_vals, linestyle="solid", color="blue", label="$\\mu_x$")
-plt.plot(muy, n_vals, linestyle="dashed", color="red", label="$\\mu_y$")
-plt.plot(muz, n_vals, linestyle="solid", color="green", label="$\\mu_z$")
+plt.plot(mux[mu_start_ind:], n_vals[mu_start_ind:], linestyle="solid", color="blue", label="$\\mu_x$")
+plt.plot(muy[mu_start_ind:], n_vals[mu_start_ind:], linestyle="dashed", color="red", label="$\\mu_y$")
+plt.plot(muz[mu_start_ind:], n_vals[mu_start_ind:], linestyle="solid", color="green", label="$\\mu_z$")
 plt.axhline(n_trans_start, linestyle="dashed", color="black")
 plt.axhline(n_trans_end, linestyle="dashed", color="black")
 plt.legend()
