@@ -39,7 +39,9 @@ def find_P(nx, ny, nz):
 
 ## Define region of n to consider, and create arrays
 num_points = 100
+# nlow = 0.01
 nlow = 0.25
+# nhigh = 0.99
 nhigh = 0.35
 n_vals = np.linspace(nlow, nhigh, num_points)
 F_vals = np.zeros(num_points)
@@ -141,10 +143,10 @@ plt.figure()
 plt.title("Chemical potential of each rod orientation")
 plt.xlabel("$n$")
 plt.ylabel("$\\mu_i$")
-plt.plot(n_vals[mu_start_ind:], mu[mu_start_ind:], linestyle="solid", color="blue", label="$\\mu$")
-# plt.plot(n_vals[mu_start_ind], mux[mu_start_ind], linestyle="solid", color="blue", label="$\\mu_x$")
-# plt.plot(n_vals[mu_start_ind], muy[mu_start_ind], linestyle="dashed", color="red", label="$\\mu_y$")
-# plt.plot(n_vals[mu_start_ind], muz[mu_start_ind], linestyle="solid", color="green", label="$\\mu_z$")
+# plt.plot(n_vals[mu_start_ind:], mu[mu_start_ind:], linestyle="solid", color="blue", label="$\\mu$")
+plt.plot(n_vals[mu_start_ind:], mux[mu_start_ind:], linestyle="solid", color="blue", label="$\\mu_x$")
+plt.plot(n_vals[mu_start_ind:], muy[mu_start_ind:], linestyle="dashed", color="red", label="$\\mu_y$")
+plt.plot(n_vals[mu_start_ind:], muz[mu_start_ind:], linestyle="solid", color="green", label="$\\mu_z$")
 plt.axvline(n_trans_start, linestyle="dashed", color="black")
 plt.axvline(n_trans_end, linestyle="dashed", color="black")
 plt.legend()
