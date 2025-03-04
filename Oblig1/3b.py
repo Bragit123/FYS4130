@@ -58,8 +58,10 @@ for i in range(num_points):
     nxy_range = np.linspace(n/1000, n/3, grid_size)
     nx, ny = np.meshgrid(nxy_range, nxy_range)
     nz = n-nx-ny
+
     Fi = find_F(nx, ny, nz)
     eq_ind = np.argmin(Fi)
+    
     F_eq = Fi.flatten()[eq_ind]
     F_vals[i] = F_eq
     
