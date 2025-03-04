@@ -35,7 +35,7 @@ Ny_vals = np.zeros(num_points)
 Nz_vals = np.zeros(num_points)
 Ni_vals = [Nx_vals, Ny_vals, Nz_vals]
 
-grid_size = 100
+grid_size = 1000
 
 ## Find values at equilibrium
 for i in range(num_points):

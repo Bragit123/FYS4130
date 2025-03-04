@@ -40,9 +40,9 @@ def find_P(nx, ny, nz):
 ## Define region of n to consider, and create arrays
 num_points = 100
 # nlow = 0.01
-nlow = 0.25
+nlow = 0.2
 # nhigh = 0.4
-nhigh = 0.35
+nhigh = 0.38
 n_vals = np.linspace(nlow, nhigh, num_points)
 F_vals = np.zeros(num_points)
 nx_vals = np.zeros(num_points)
