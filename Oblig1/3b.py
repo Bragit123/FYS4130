@@ -75,9 +75,11 @@ for i in range(num_points):
 
 ## Locate phase transition from instabillity
 ddF_n = np.gradient(np.gradient(F_vals))
+dddF_n = np.gradient(ddF_n)
 trans_ind = np.argwhere(ddF_n <= 0)
 trans_start_ind = trans_ind[0]
 trans_end_ind = trans_ind[-1]
+crit_ind = np.argmin(np.abs(dddF_n)) # Find the value where dddF_n is closest to zero
 
 n_trans_start = n_vals[trans_start_ind]
 n_trans_end = n_vals[trans_end_ind]
@@ -86,6 +88,7 @@ post_trans_ind = np.arange(trans_end_ind[0], num_points)
 
 print(f"Phase transition starts at n = {n_trans_start}.")
 print(f"Phase transition ends at n = {n_trans_end}.")
+print(f"Critical concentration: n = {n_vals[crit_ind]}")
 
 ## Values before phase transition
 n_pre = n_vals[pre_trans_ind]
