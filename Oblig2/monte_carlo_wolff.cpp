@@ -10,15 +10,16 @@ using namespace std ;
 
 const int q = 3; // q spin states
 const int L = 16; // Linear system size
-const double T = 0.25; // Temperature in units of J
+const double T = 0.5; // Temperature in units of J
 
 const int N = L ; // Total number of spins
-const double pconnect = 0.5; // Connection probability
+// const double pconnect = 0.99; // Connection probability
+const double pconnect = 1 - exp(-1.0/T); // Connection probability
 
 const int NCLUSTERS = 1; // Number of cluster builds in one MC step.
 const int NESTEPS = 10000; // Number of equilibrium MC steps.
 const int NMSTEPS = 10000; // Number of measurement MC step.
-const int NBINS = 10; // Number of measurement bins
+const int NBINS = 1; // Number of measurement bins
 
 vector<int> S(N); // The spin array
 vector<int> M(q); // Number of spins in different states.
@@ -72,21 +73,49 @@ int main () {
             FlipandBuildFrom(rand() % N);
     }
     
-    cout << "# m abs(m) abs(m)^2 abs(m)^4" << endl;
+    // cout << "# m abs(m) abs(m)^2 abs(m)^4" << endl;
 
     // Measure
+    vector< complex<double> > mi(N); // Magnetization of i'th element
+    vector< complex<double> > m0i(N); // Magnetization of 0'th and i'th element multiplied
+    vector< complex<double> > corr_func(N);
+    
     for (int n=0; n<NBINS; n++) {
+
+        for (int i=0; i<N; i++) {
+            mi[i] = complex<double>(0., 0.);
+            m0i[i] = complex<double>(0., 0.);
+        }
+
         complex<double> m(0., 0.);
         double m1=0, m2=0, m4=0; // Measurement results
         
         for (int t=0; t<NMSTEPS; t++) {
-            for (int c=0; c<NCLUSTERS; c++)
+            for (int c=0; c<NCLUSTERS; c++) {
                 FlipandBuildFrom(rand() % N);
+            }
+            
+            // double boltzmann_factor = 0.0;
+
+            // for (int i=0; i<N; i++) {
+            //     double kron_delta = 0.0;
+            //     if (S[i] == S[(i+1)%L]) {
+            //         kron_delta = 1.0;
+            //     }
+            //     boltzmann_factor *= exp(1.0/T * kron_delta);
+            // }
             
             complex<double> tm(0., 0.);
             
             for (int s=0; s<q; s++) {
                 tm += W[s] * double (M[s]);
+            }
+
+            for (int r=0; r<N; r++) {
+                // double N_double = N;
+                mi[r] += W[S[r]];
+                // cout << mi[i] << endl;
+                m0i[r] += conj(mi[0]) * mi[r];
             }
 
             tm /= N;
@@ -98,9 +127,27 @@ int main () {
             m4 += tm2 * tm2;
         }
 
+        for (int r=0; r<N; r++) {
+            mi[r] /= NMSTEPS;
+            m0i[r] /= NMSTEPS;
+            corr_func[r] = m0i[r] - conj(mi[0]) * mi[r];
+            cout << r << " " << corr_func[r].real() << " " << corr_func[r].imag() << endl;
+        }
+
         m /= NMSTEPS; m1 /= NMSTEPS; m2 /= NMSTEPS; m4 /= NMSTEPS;
         
         // Output in a numpy-friendly format
-        cout << m.real() << "+" << m.imag() << "j " << m1 << " " << m2 << " " << m4 << endl;
+        // cout << m.real() << "+" << m.imag() << "j " << m1 << " " << m2 << " " << m4 << endl;
     }
+
+    // cout << "# r Re(C) Im(C)" << endl;
+    // for (int r=0; r<N; r++) {
+    //     mi[r] /= NBINS;
+    //     m0i[r] /= NBINS;
+    //     // corr_func[r] = m0i[r] - conj(mi[0]) * mi[r];
+    //     corr_func[r] = m0i[r];
+
+    //     cout << r << " " << corr_func[r].real() << " " << corr_func[r].imag() << endl;
+    // }
+
 }
