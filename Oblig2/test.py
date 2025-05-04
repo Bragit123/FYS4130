@@ -2,39 +2,23 @@
 ## translating it into python, then expanding on that.
 
 import numpy as np
+from scipy.constants import k
 import matplotlib.pyplot as plt
 
 np.random.seed(100)
 
-## Dimension of system. Should be 1 or 2 (1D chain or 2D lattice)
-d = 1
-
 q = 3 # q spin states
 L = 16 # System size
+N = L # Total number of spins
 T = 0.5 # Temperature in units of J
+
 P_connect = 1 - np.exp(-1/T) # Connection probability
 
-## Number of MC steps and Wolff clusters
-n_clusters = 5 # Number of clusters per MC step
+n_clusters = 1 # Number of clusters per MC step
 n_steps_eq = 10000 # Number of equilibrium MC steps
 n_steps = 10000 # Number of measurement MC steps
 
-## Define index and position arrays depending on system dimension
-if d == 1:
-    N = L
-    indices = np.arange(N).reshape(N, 1)
-    x_arr = indices[:,0]
-    y_arr = np.zeros(N, dtype=int)
-
-if d == 2:
-    N = L*L
-    indices = np.arange(N).reshape(L, L)
-    y_arr, x_arr = np.meshgrid(np.arange(L), np.arange(L))
-    x_arr = x_arr.flatten()
-    y_arr = y_arr.flatten()
-
-
-S = np.zeros(N, dtype=int) # Array containing spin state of each site
+S = np.random.randint(0, 3, N) # Array containing spin state of each site
 
 # Possible values of m_j from spin
 m_spin = np.array([
@@ -47,26 +31,24 @@ m_spin = np.array([
 M_count = np.zeros(q)
 M_count[0] = N
 
-def neighbor_index(i, dir):
-    # Find position from index
-    x = x_arr[i]
-    y = y_arr[i]
+def index(x):
+    # Find index of position
+    return x
 
+def xpos(i):
+    # Find position of index
+    return i%L
+
+def neighbor_index(i, dir):
+    x = xpos(i)
     if dir == 0:
         # Right
-        return indices[(x+1)%L, y]
+        return index((x+1)%L)
     elif dir == 1:
-        # Up
-        return indices[x, (y+1)%L]
-    elif dir == 2:
         # Left
-        return indices[(x-1+L)%L, y]
-    elif dir == 3:
-        # Down
-        return indices[x, (y-1+L)%L]
+        return index((x-1+L)%L)
     else:
-        raise ValueError("dir must be 0, 1, 2 or 3 (right, up, left, down)")
-
+        raise ValueError("dir must be 0 or 1")
 
 def flip_and_build(i):
     # Run one cluster starting from i by going through neighbours recursively
@@ -79,12 +61,7 @@ def flip_and_build(i):
     M_count[old_state] -= 1
     M_count[new_state] += 1
 
-    if d == 1:
-        dir_arr = [0, 2] # Only right and left for 1D systems
-    else:
-        dir_arr = [0, 1, 2, 3] # All 4 directions for 2D systems
-
-    for dir in dir_arr:
+    for dir in range(2):
         j = neighbor_index(i, dir)
         if (S[j] == old_state):
             if (np.random.uniform() < P_connect):
@@ -110,6 +87,9 @@ mi_mean = np.mean(mit, axis=1)
 
 corr_func = np.mean(m0t_mit, axis=1) - np.conj(mi_mean[0]) * mi_mean
 
+# print(corr_func)
+
+
 
 ## Analytic correlation function
 def corr_func_anal(r):
@@ -129,5 +109,6 @@ plt.xlabel("$r$")
 plt.ylabel("$C(r)$")
 plt.plot(r_vals, corr_anal, label="Analytic")
 plt.plot(r_vals, np.real(corr_func), label="Real")
+plt.plot(r_vals, np.imag(corr_func), label="Imaginary")
 plt.legend()
-plt.savefig("corr_func.pdf")
+plt.savefig("test.pdf")
