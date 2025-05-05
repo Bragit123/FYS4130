@@ -91,31 +91,25 @@ def flip_and_build(i):
                 flip_and_build(j)
 
 
-from numba import jit
+## Equilibrate
+for t in range(n_steps_eq):
+    for c in range(n_clusters):
+        flip_and_build(np.random.randint(0, N))
 
-@jit
-def run_MC():
-    ## Equilibrate
-    for t in range(n_steps_eq):
-        for c in range(n_clusters):
-            flip_and_build(np.random.randint(0, N))
+## Run measurements
+mit = np.zeros((N, n_steps), dtype=complex)
 
-    ## Run measurements
-    mit = np.zeros((N, n_steps), dtype=complex)
+for t in range(n_steps):
+    for c in range(n_clusters):
+        flip_and_build(np.random.randint(0,N))
+    
+    mit[:, t] = m_spin[S]
 
-    for t in range(n_steps):
-        for c in range(n_clusters):
-            flip_and_build(np.random.randint(0,N))
-        
-        mit[:, t] = m_spin[S]
+m0t_mit = np.conj(mit[0,:]) * mit
+mi_mean = np.mean(mit, axis=1)
 
-    m0t_mit = np.conj(mit[0,:]) * mit
-    mi_mean = np.mean(mit, axis=1)
+corr_func = np.mean(m0t_mit, axis=1) - np.conj(mi_mean[0]) * mi_mean
 
-    corr_func = np.mean(m0t_mit, axis=1) - np.conj(mi_mean[0]) * mi_mean
-    return corr_func
-
-corr_func = run_MC()
 
 ## Analytic correlation function
 def corr_func_anal(r):

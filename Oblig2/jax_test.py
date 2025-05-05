@@ -1,10 +1,11 @@
 ## This code was written by looking through the C++ skeleton code, and
 ## translating it into python, then expanding on that.
 
-import numpy as np
+import jax.numpy as np
+from jax import random
 import matplotlib.pyplot as plt
 
-np.random.seed(100)
+key = random.key(100)
 
 
 #### Problem 2a)
@@ -42,7 +43,7 @@ class Spin_Model:
 
         # Initialize magnetization counter
         self.M_count = np.zeros(self.q)
-        self.M_count[0] = self.N
+        self.M_count.at[0].set(self.N)
     
     def neighbor_index(self, i, dir):
         # Find position from index
@@ -69,11 +70,11 @@ class Spin_Model:
         old_state = self.S[i]
         new_state = (self.S[i]+1)%self.q
 
-        self.S[i] = new_state # Flip the spin
+        self.S.at[i].set(new_state) # Flip the spin
         
         # Count spins
-        self.M_count[old_state] -= 1
-        self.M_count[new_state] += 1
+        self.M_count.at[old_state].set(self.M_count[old_state]-1)
+        self.M_count.at[new_state].set(self.M_count[new_state]+1)
 
         if self.d == 1:
             dir_arr = [0, 2] # Only right and left for 1D systems
@@ -83,40 +84,9 @@ class Spin_Model:
         for dir in dir_arr:
             j = self.neighbor_index(i, dir)
             if (self.S[j] == old_state):
-                if (np.random.uniform() < self.P_connect):
+                if (random.uniform(key) < self.P_connect):
                     self.flip_and_build(j)
-
-    def flip_and_build_loop(self, start_i):
-        stack = [start_i]
-        old_state = self.S[start_i]
-        new_state = (old_state + 1) % self.q
-
-        while stack:
-            i = stack.pop()
-
-            # Skip already-flipped spins
-            if self.S[i] != old_state:
-                continue
-
-            # Flip the spin
-            self.S[i] = new_state
-            self.M_count[old_state] -= 1
-            self.M_count[new_state] += 1
-
-            # Determine directions based on dimensionality
-            if self.d == 1:
-                dir_arr = [0, 2]  # Left and right
-            else:
-                dir_arr = [0, 1, 2, 3]  # Up, right, down, left
-
-            # Check neighbors
-            for dir in dir_arr:
-                j = self.neighbor_index(i, dir)
-                if self.S[j] == old_state:
-                    if np.random.uniform() < self.P_connect:
-                        stack.append(j)
-
-
+    
     ## Analytic correlation function
     def corr_func_anal(self, r):
         lam0 = np.exp(1/self.T) + 2
@@ -129,18 +99,21 @@ class Spin_Model:
 
     def run_MC(self, n_clusters=5, n_steps_eq=10000, n_steps=10000):
         ## Equilibrate
+        newkey = random.key(100)
         for t in range(n_steps_eq):
             for c in range(n_clusters):
-                self.flip_and_build(np.random.randint(0, self.N))
+                oldkey, newkey = random.split(key)
+                self.flip_and_build(random.randint(key, shape=(1,), minval=0, maxval=self.N))
         
         ## Run measurements
         mit = np.zeros((self.N, n_steps), dtype=complex)
 
         for t in range(n_steps):
             for c in range(n_clusters):
-                self.flip_and_build_loop(np.random.randint(0, self.N))
+                oldkey, newkey = random.split(key)
+                self.flip_and_build(random.randint(key, shape=(1,), minval=0, maxval=self.N))
             
-            mit[:, t] = self.m_spin[self.S] # Local magnetization m_i
+            mit.at[:, t].set(self.m_spin[self.S]) # Local magnetization m_i
 
         mi_mean = np.mean(mit, axis=1) # Mean local magnetization
 
@@ -187,25 +160,25 @@ for i in range(len(T_vals)):
 
 
 
-# #### Problem 2c)
+#### Problem 2c)
 
-# d = 2
-# n_points = 6 # Number of data points to run MC simulation for
-# T_min = 0
-# T_max = 100
-# T_vals = np.linspace(T_min, T_max, n_points)
-# m_mean_vals = np.zeros(n_points)
+d = 2
+n_points = 6 # Number of data points to run MC simulation for
+T_min = 0
+T_max = 100
+T_vals = np.linspace(T_min, T_max, n_points)
+m_mean_vals = np.zeros(n_points)
 
-# model = Spin_Model(d=2, L=L, T=T_vals[0])
-# for i in range(n_points):
-#     model.T = T_vals[i]
-#     results = model.run_MC()
-#     m_mean_vals[i] = results["m_mean"]
+model = Spin_Model(d=2, L=L, T=T_vals[0])
+for i in range(n_points):
+    model.T = T_vals[i]
+    results = model.run_MC()
+    m_mean_vals.at[i].set(results["m_mean"])
 
-# plt.figure()
-# plt.title(f"Real part of average magnetization per site")
-# plt.xlabel("$T [J]$")
-# plt.ylabel("$\\text{Re}\\left(\\langle m \\rangle\\right)$")
-# plt.plot(T_vals, np.real(m_mean_vals), "or")
-# plt.legend()
-# plt.savefig(f"m_mean_real.pdf")
+plt.figure()
+plt.title(f"Real part of average magnetization per site")
+plt.xlabel("$T [J]$")
+plt.ylabel("$\\text{Re}\\left(\\langle m \\rangle\\right)$")
+plt.plot(T_vals, np.real(m_mean_vals), "or")
+plt.legend()
+plt.savefig(f"m_mean_real.pdf")

@@ -1,0 +1,3 @@
+/Users/brageandreastrefjord/Desktop/Github/FYS4130/Oblig2/cpp_dir/build/CMakeFiles/spin_sim.dir
+/Users/brageandreastrefjord/Desktop/Github/FYS4130/Oblig2/cpp_dir/build/CMakeFiles/edit_cache.dir
+/Users/brageandreastrefjord/Desktop/Github/FYS4130/Oblig2/cpp_dir/build/CMakeFiles/rebuild_cache.dir

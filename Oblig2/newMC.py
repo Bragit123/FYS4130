@@ -6,18 +6,14 @@ import matplotlib.pyplot as plt
 
 np.random.seed(100)
 
-## Dimension of system. Should be 1 or 2 (1D chain or 2D lattice)
-d = 1
 
-q = 3 # q spin states
+#### Problem 2a)
+
+d = 1 # Dimension of system. Should be 1 or 2 (1D chain or 2D lattice)
 L = 16 # System size
-T = 0.5 # Temperature in units of J
-P_connect = 1 - np.exp(-1/T) # Connection probability
+T = 0.25 # Temperature in units of J
 
-## Number of MC steps and Wolff clusters
-n_clusters = 5 # Number of clusters per MC step
-n_steps_eq = 10000 # Number of equilibrium MC steps
-n_steps = 10000 # Number of measurement MC steps
+q = 3 # Number of spin states
 
 ## Define index and position arrays depending on system dimension
 if d == 1:
@@ -25,16 +21,15 @@ if d == 1:
     indices = np.arange(N).reshape(N, 1)
     x_arr = indices[:,0]
     y_arr = np.zeros(N, dtype=int)
-
-if d == 2:
+elif d == 2:
     N = L*L
     indices = np.arange(N).reshape(L, L)
     y_arr, x_arr = np.meshgrid(np.arange(L), np.arange(L))
     x_arr = x_arr.flatten()
     y_arr = y_arr.flatten()
 
-
 S = np.zeros(N, dtype=int) # Array containing spin state of each site
+P_connect = 1 - np.exp(-1/T) # Connection probability
 
 # Possible values of m_j from spin
 m_spin = np.array([
@@ -47,7 +42,7 @@ m_spin = np.array([
 M_count = np.zeros(q)
 M_count[0] = N
 
-def neighbor_index(i, dir):
+def neighbor_index(self, i, dir):
     # Find position from index
     x = x_arr[i]
     y = y_arr[i]
@@ -67,8 +62,7 @@ def neighbor_index(i, dir):
     else:
         raise ValueError("dir must be 0, 1, 2 or 3 (right, up, left, down)")
 
-
-def flip_and_build(i):
+def flip_and_build(self, i):
     # Run one cluster starting from i by going through neighbours recursively
     old_state = S[i]
     new_state = (S[i]+1)%q
@@ -90,35 +84,8 @@ def flip_and_build(i):
             if (np.random.uniform() < P_connect):
                 flip_and_build(j)
 
-
-from numba import jit
-
-@jit
-def run_MC():
-    ## Equilibrate
-    for t in range(n_steps_eq):
-        for c in range(n_clusters):
-            flip_and_build(np.random.randint(0, N))
-
-    ## Run measurements
-    mit = np.zeros((N, n_steps), dtype=complex)
-
-    for t in range(n_steps):
-        for c in range(n_clusters):
-            flip_and_build(np.random.randint(0,N))
-        
-        mit[:, t] = m_spin[S]
-
-    m0t_mit = np.conj(mit[0,:]) * mit
-    mi_mean = np.mean(mit, axis=1)
-
-    corr_func = np.mean(m0t_mit, axis=1) - np.conj(mi_mean[0]) * mi_mean
-    return corr_func
-
-corr_func = run_MC()
-
 ## Analytic correlation function
-def corr_func_anal(r):
+def corr_func_anal(self, r):
     lam0 = np.exp(1/T) + 2
     lam1 = np.exp(1/T) - 1
     
@@ -127,13 +94,33 @@ def corr_func_anal(r):
 
     return num/den
 
-## Plot
-r_vals = np.arange(0, N)
-corr_anal = corr_func_anal(r_vals)
+def run_MC(self, d, L, T, n_clusters=5, n_steps_eq=10000, n_steps=10000):
+    ## Equilibrate
+    for t in range(n_steps_eq):
+        for c in range(n_clusters):
+            flip_and_build(np.random.randint(0, N))
+    
+    ## Run measurements
+    mit = np.zeros((N, n_steps), dtype=complex)
 
-plt.xlabel("$r$")
-plt.ylabel("$C(r)$")
-plt.plot(r_vals, corr_anal, label="Analytic")
-plt.plot(r_vals, np.real(corr_func), label="Real")
-plt.legend()
-plt.savefig("corr_func.pdf")
+    for t in range(n_steps):
+        for c in range(n_clusters):
+            flip_and_build(np.random.randint(0, N))
+        
+        mit[:, t] = m_spin[S] # Local magnetization m_i
+
+    mi_mean = np.mean(mit, axis=1) # Mean local magnetization
+
+    mt = np.sum(mit, axis=0) # Total magnetization
+    m_mean = np.mean(mt) # Mean total magnetization
+
+    m0t_mit = np.conj(mit[0,:]) * mit # Conjugate of m_0 times m_i for each time step and site i
+
+    corr_func = np.mean(m0t_mit, axis=1) - np.conj(mi_mean[0]) * mi_mean # Correlation function as function of site i
+
+    results = {
+        "corr_func": corr_func,
+        "m_mean": m_mean
+    }
+
+    return results

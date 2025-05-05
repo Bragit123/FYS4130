@@ -10,7 +10,7 @@ using namespace std ;
 
 const int q = 3; // q spin states
 const int L = 16; // Linear system size
-const double T = 0.5; // Temperature in units of J
+const double T = 0.25; // Temperature in units of J
 
 const int N = L ; // Total number of spins
 // const double pconnect = 0.99; // Connection probability
