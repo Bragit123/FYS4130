@@ -1,139 +1,137 @@
-## This code was written by looking through the C++ skeleton code, and
-## translating it into python, then expanding on that.
+# This code was created by looking at the skeleton code for C++, rewriting it into python, fixing it and
+# generalizing to two dimensions. I then realized that the code was way too slow to be used for subproblems
+# after 2b, so I had ChatGPT fix it by rewriting it using numba jit and other optimization methods.
 
 import numpy as np
 import matplotlib.pyplot as plt
+from numba import njit
 
 np.random.seed(100)
 
-## Dimension of system. Should be 1 or 2 (1D chain or 2D lattice)
-d = 1
+# Precompute neighbors for the lattice
+def compute_neighbors(d, L):
+    if d == 1:
+        N = L
+        neighbors = np.zeros((N, 2), dtype=np.int32)
+        for i in range(N):
+            neighbors[i, 0] = (i + 1) % L  # right
+            neighbors[i, 1] = (i - 1 + L) % L  # left
+    elif d == 2:
+        N = L * L
+        neighbors = np.zeros((N, 4), dtype=np.int32)
+        for x in range(L):
+            for y in range(L):
+                i = x * L + y
+                neighbors[i, 0] = ((x + 1) % L) * L + y     # right
+                neighbors[i, 1] = x * L + (y + 1) % L       # up
+                neighbors[i, 2] = ((x - 1 + L) % L) * L + y # left
+                neighbors[i, 3] = x * L + (y - 1 + L) % L   # down
+    else:
+        raise ValueError("Only 1D and 2D supported")
+    return neighbors
 
-q = 3 # q spin states
-L = 16 # System size
-T = 0.5 # Temperature in units of J
-P_connect = 1 - np.exp(-1/T) # Connection probability
+@njit
+def flip_and_build_loop_jit(S, M_count, neighbors, P_connect, q, start_i, d):
+    old_state = S[start_i]
+    new_state = old_state
+    while new_state == old_state:
+        new_state = np.random.randint(0, q)
 
-## Number of MC steps and Wolff clusters
-n_clusters = 5 # Number of clusters per MC step
-n_steps_eq = 10000 # Number of equilibrium MC steps
-n_steps = 10000 # Number of measurement MC steps
+    stack = np.empty(len(S), dtype=np.int32)
+    stack[0] = start_i
+    stack_ptr = 1
 
-## Define index and position arrays depending on system dimension
-if d == 1:
-    N = L
-    indices = np.arange(N).reshape(N, 1)
-    x_arr = indices[:,0]
-    y_arr = np.zeros(N, dtype=int)
+    while stack_ptr > 0:
+        stack_ptr -= 1
+        i = stack[stack_ptr]
 
-if d == 2:
-    N = L*L
-    indices = np.arange(N).reshape(L, L)
-    y_arr, x_arr = np.meshgrid(np.arange(L), np.arange(L))
-    x_arr = x_arr.flatten()
-    y_arr = y_arr.flatten()
+        if S[i] != old_state:
+            continue
 
+        S[i] = new_state
+        M_count[old_state] -= 1
+        M_count[new_state] += 1
 
-S = np.zeros(N, dtype=int) # Array containing spin state of each site
+        dir_arr = range(2) if d == 1 else range(4)
+        for dir in dir_arr:
+            j = neighbors[i, dir]
+            if S[j] == old_state:
+                if np.random.rand() < P_connect:
+                    stack[stack_ptr] = j
+                    stack_ptr += 1
 
-# Possible values of m_j from spin
-m_spin = np.array([
+@njit
+def corr_func_anal(r_vals, T, N):
+    lam0 = np.exp(1/T) + 2
+    lam1 = np.exp(1/T) - 1
+    result = np.empty(len(r_vals))
+    den = lam0**N + 2 * lam1**N
+    for idx in range(len(r_vals)):
+        r = r_vals[idx]
+        num = lam1**N + lam0**r * lam1**(N - r) + lam0**(N - r) * lam1**r
+        result[idx] = num / den
+    return result
+
+def run_MC(d, L, T, q=3, n_clusters=10, n_steps_eq=10000, n_steps=50000):
+    N = L if d == 1 else L * L
+    S = np.zeros(N, dtype=np.int32)
+    P_connect = 1 - np.exp(-1/T)
+    neighbors = compute_neighbors(d, L)
+    m_spin = np.array([
         1,
         np.exp(2*np.pi/3 * 1j),
         np.exp(4*np.pi/3 * 1j)
-])
+    ])
+    M_count = np.zeros(q, dtype=np.int32)
+    M_count[0] = N
 
-# Initialize magnetization counter
-M_count = np.zeros(q)
-M_count[0] = N
+    for _ in range(n_steps_eq):
+        for _ in range(n_clusters):
+            flip_and_build_loop_jit(S, M_count, neighbors, P_connect, q, np.random.randint(0, N), d)
 
-def neighbor_index(i, dir):
-    # Find position from index
-    x = x_arr[i]
-    y = y_arr[i]
-
-    if dir == 0:
-        # Right
-        return indices[(x+1)%L, y]
-    elif dir == 1:
-        # Up
-        return indices[x, (y+1)%L]
-    elif dir == 2:
-        # Left
-        return indices[(x-1+L)%L, y]
-    elif dir == 3:
-        # Down
-        return indices[x, (y-1+L)%L]
-    else:
-        raise ValueError("dir must be 0, 1, 2 or 3 (right, up, left, down)")
-
-
-def flip_and_build(i):
-    # Run one cluster starting from i by going through neighbours recursively
-    old_state = S[i]
-    new_state = (S[i]+1)%q
-
-    S[i] = new_state # Flip the spin
-    
-    # Count spins
-    M_count[old_state] -= 1
-    M_count[new_state] += 1
-
-    if d == 1:
-        dir_arr = [0, 2] # Only right and left for 1D systems
-    else:
-        dir_arr = [0, 1, 2, 3] # All 4 directions for 2D systems
-
-    for dir in dir_arr:
-        j = neighbor_index(i, dir)
-        if (S[j] == old_state):
-            if (np.random.uniform() < P_connect):
-                flip_and_build(j)
-
-
-from numba import jit
-
-@jit
-def run_MC():
-    ## Equilibrate
-    for t in range(n_steps_eq):
-        for c in range(n_clusters):
-            flip_and_build(np.random.randint(0, N))
-
-    ## Run measurements
-    mit = np.zeros((N, n_steps), dtype=complex)
-
+    mt = np.zeros(n_steps, dtype=np.complex128)
+    S_mean = np.zeros(n_steps)
     for t in range(n_steps):
-        for c in range(n_clusters):
-            flip_and_build(np.random.randint(0,N))
-        
-        mit[:, t] = m_spin[S]
+        for _ in range(n_clusters):
+            flip_and_build_loop_jit(S, M_count, neighbors, P_connect, q, np.random.randint(0, N), d)
+        mt[t] = np.mean(m_spin[S])
+        S_mean[t] = np.mean(S)
 
-    m0t_mit = np.conj(mit[0,:]) * mit
-    mi_mean = np.mean(mit, axis=1)
+    m_mean = np.mean(mt)
+    m_mean_square = np.mean(np.abs(mt)**2)
+    m_mean_quad = np.mean(np.abs(mt)**4)
 
-    corr_func = np.mean(m0t_mit, axis=1) - np.conj(mi_mean[0]) * mi_mean
-    return corr_func
+    return {
+        "m_mean": m_mean,
+        "m_mean_square": m_mean_square,
+        "m_mean_quad": m_mean_quad,
+        "S_mean": S_mean
+    }
 
-corr_func = run_MC()
+# --- Finite-size scaling study ---
+d = 2
+Ls = [8, 16, 32]
+n_points = 40
+T_min = 1e-2
+T_max = 3.0
+T_vals = np.linspace(T_min, T_max, n_points)
 
-## Analytic correlation function
-def corr_func_anal(r):
-    lam0 = np.exp(1/T) + 2
-    lam1 = np.exp(1/T) - 1
-    
-    num = lam1**N + lam0**r * lam1**(N-r) + lam0**(N-r) * lam1**r
-    den = lam0**N + 2 * lam1**N
+plt.figure()
 
-    return num/den
+for L in Ls:
+    gamma_vals = np.zeros(n_points)
+    for i, T in enumerate(T_vals):
+        print(f"L = {L}, T index {i+1}/{n_points}", end="\r")
+        results = run_MC(d, L, T)
+        m2 = results["m_mean_square"]
+        m4 = results["m_mean_quad"]
+        gamma_vals[i] = m4 / (m2**2 + 1e-12)
 
-## Plot
-r_vals = np.arange(0, N)
-corr_anal = corr_func_anal(r_vals)
+    plt.plot(T_vals, gamma_vals, label=f"L={L}")
 
-plt.xlabel("$r$")
-plt.ylabel("$C(r)$")
-plt.plot(r_vals, corr_anal, label="Analytic")
-plt.plot(r_vals, np.real(corr_func), label="Real")
+plt.title("Binder cumulant \u0393 vs. T for different system sizes")
+plt.xlabel("$T / J$")
+plt.ylabel("$\\Gamma$")
 plt.legend()
-plt.savefig("corr_func.pdf")
+plt.grid(True)
+plt.savefig("gamma_crossing.pdf")
