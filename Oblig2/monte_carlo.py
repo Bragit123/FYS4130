@@ -1,8 +1,10 @@
 # This code was created by looking at the skeleton code for C++, rewriting it into python, fixing it and
-# generalizing to two dimensions. I then realized that the code was way too slow to be used for subproblems
-# after 2b, so I had ChatGPT fix it by rewriting it using numba jit and other optimization methods.
-# I have added detailed comments to most of the code to make sure I understand all parts of the code.
-# To see the old, non-optimized version written by me, see old_monte_carlo.py
+# generalizing to two dimensions, and then have ChatGPT optimize it using numba jit (and some other
+# optimization methods). The reason for this is that my own code was too slow to run many simulations
+# for different temperatures and lattice sizes. I have added detailed comments to most of the code to
+# make sure I understand the code in its entirety. To see the old, non-optimized version written by me,
+# see old_monte_carlo.py. In particular numba jit does not work well on recursive functions, which is
+# why the flip_and_build function has been rewritten using loops.
 
 import numpy as np
 import matplotlib.pyplot as plt
