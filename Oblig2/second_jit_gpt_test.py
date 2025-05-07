@@ -155,19 +155,20 @@ for i, T in enumerate(T_vals):
     plt.plot(r_vals, corr_anal, "k", label="Analytic")
     plt.plot(r_vals, np.real(corr_MC), "or", label="MC simulation")
     plt.legend()
-    plt.savefig(f"corr_func_1D_{T_text[i]}.pdf")
+    plt.savefig(f"Figures/corr_func_1D_{T_text[i]}.pdf")
 
 
 #### --- Problem 2c and 2d --- ####
 d = 2
 L = 16
-n_points = 20 # Number of data points to run MC simulation for
+n_points = 100 # Number of data points to run MC simulation for
 # T_min = 1e-5
 # T_max = 1e4
 # T_vals = np.linspace(T_min, T_max, n_points)
 # T_vals = np.logspace(np.log10(T_min), np.log10(T_max), n_points)
+T_c = 0.9950
 T_min = 0.1
-T_max = 2.0
+T_max = 3
 T_vals = np.linspace(T_min, T_max, n_points)
 m_mean_vals = np.zeros(n_points, dtype=complex)
 m_mean_square_vals = np.zeros(n_points)
@@ -177,55 +178,55 @@ S_vals = np.zeros((n_points, 20000))
 for i in range(n_points):
     T = T_vals[i]
     print(f"Problem 2c-d: {i+1}/{n_points}", end="\r")
-    results = run_MC(d, L, T, n_clusters=1, n_steps_eq=100000, n_steps=100000)
+    results = run_MC(d, L, T, n_clusters=1, n_steps_eq=10000, n_steps=10000)
     m_mean_vals[i] = results["m_mean"]
     m_mean_square_vals[i] = results["m_mean_square"]
     m_mean_quad_vals[i] = results["m_mean_quad"]
     # S_vals[i,:] = results["S_mean"]
 
-plt.figure()
-plt.plot(np.arange(20000), S_vals[0,:], ".")
-plt.savefig("S_vals.pdf")
+# plt.figure()
+# plt.plot(np.arange(20000), S_vals[0,:], ".")
+# plt.savefig("Figures/S_vals.pdf")
 
 plt.figure()
 plt.title(f"Real part of average magnetization per site")
-plt.xscale("log")
 plt.xlabel("$T [J]$")
 plt.ylabel("$\\text{Re}\\left(\\langle m \\rangle\\right)$")
 plt.plot(T_vals, np.real(m_mean_vals), label="Magnetization")
-plt.plot(T_vals, np.imag(m_mean_vals), label="Magnetization")
+plt.axvline(T_c, label="$T_c$", linestyle="dashed", color="black")
 plt.legend()
-plt.savefig(f"m_mean_real.pdf")
+plt.savefig(f"Figures/m_mean_real.pdf")
 
 plt.figure()
 plt.title(f"Average square magnetization per site")
-plt.xscale("log")
 plt.xlabel("$T [J]$")
 plt.ylabel("$\\langle |m|^2 \\rangle$")
-plt.plot(T_vals, m_mean_square_vals, "k", label="Square magnetization")
+plt.plot(T_vals, m_mean_square_vals, label="Square magnetization")
+plt.axvline(T_c, label="$T_c$", linestyle="dashed", color="black")
 plt.legend()
-plt.savefig(f"m_mean_square.pdf")
+plt.savefig(f"Figures/m_mean_square.pdf")
 
-plt.figure()
-plt.title(f"Average quadruple magnetization per site")
-plt.xscale("log")
-plt.xlabel("$T [J]$")
-plt.ylabel("$\\langle |m|^4 \\rangle$")
-plt.plot(T_vals, m_mean_quad_vals, "k", label="Quadruple magnetization")
-plt.legend()
-plt.savefig(f"m_mean_quad.pdf")
+# plt.figure()
+# plt.title(f"Average quadruple magnetization per site")
+# plt.xscale("log")
+# plt.xlabel("$T [J]$")
+# plt.ylabel("$\\langle |m|^4 \\rangle$")
+# plt.plot(T_vals, m_mean_quad_vals, label="Quadruple magnetization")
+# plt.axvline(T_c, label="$T_c$", linestyle="dashed", color="black")
+# plt.legend()
+# plt.savefig(f"m_mean_quad.pdf")
 
-eps = 1e-12
-gamma = m_mean_quad_vals / (m_mean_square_vals**2 + eps)
+# eps = 1e-12
+# gamma = m_mean_quad_vals / (m_mean_square_vals**2 + eps)
 
-plt.figure()
-plt.title(f"Gamma")
-plt.xscale("log")
-plt.xlabel("$T [J]$")
-plt.ylabel("$\\Gamma$")
-plt.plot(T_vals, gamma/T_vals, "k", label="$\\Gamma$")
-plt.legend()
-plt.savefig(f"gamma.pdf")
+# plt.figure()
+# plt.title(f"Gamma")
+# plt.xscale("log")
+# plt.xlabel("$T [J]$")
+# plt.ylabel("$\\Gamma$")
+# plt.plot(T_vals, gamma/T_vals, "k", label="$\\Gamma$")
+# plt.legend()
+# plt.savefig(f"gamma.pdf")
 
 
 
@@ -233,9 +234,9 @@ plt.savefig(f"gamma.pdf")
 #### --- Problem 2f --- ####
 d = 2
 L_vals = np.array([8, 16, 32])
-n_T = 10 # Number of data points to run MC simulation for
-T_min = 0.01
-T_max = 10
+n_T = 100 # Number of data points to run MC simulation for
+T_min = 0.1
+T_max = 3
 n_L = len(L_vals)
 T_vals = np.linspace(T_min, T_max, n_T)
 # T_vals = np.logspace(np.log10(T_min), np.log10(T_max), n_T)
@@ -248,25 +249,17 @@ for l in range(n_L):
     for t in range(n_T):
         T = T_vals[t]
         print(f"Problem 2f: {l+1}/{n_L} | {t+1}/{n_T}", end="\r")
-        results = run_MC(d, L, T, n_clusters=20, n_steps_eq=10000, n_steps=10000)
+        results = run_MC(d, L, T, n_clusters=10, n_steps_eq=10000, n_steps=10000)
         m_mean_square_vals[t] = results["m_mean_square"]
         m_mean_quad_vals[t] = results["m_mean_quad"]
     gamma_vals[:, l] = m_mean_quad_vals / m_mean_square_vals**2
 
 plt.figure()
 plt.title(f"Gamma")
-# plt.xscale("log")
 plt.xlabel("$T [J]$")
 plt.ylabel("$\\Gamma$")
 for l in range(n_L):
     plt.plot(T_vals, gamma_vals[:,l], label=f"L = {L_vals[l]}")
+plt.axvline(T_c, label="$T_c$", linestyle="dashed", color="black")
 plt.legend()
-plt.savefig(f"gamma.pdf")
-
-T_01 = T_vals[np.argmin(np.abs(gamma_vals[:,0]-gamma_vals[:,1]))]
-T_02 = T_vals[np.argmin(np.abs(gamma_vals[:,0]-gamma_vals[:,2]))]
-T_12 = T_vals[np.argmin(np.abs(gamma_vals[:,1]-gamma_vals[:,2]))]
-
-print(T_01)
-print(T_02)
-print(T_12)
+plt.savefig(f"Figures/gamma.pdf")
