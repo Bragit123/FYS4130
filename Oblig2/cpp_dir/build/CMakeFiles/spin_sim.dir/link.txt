@@ -1,1 +1,0 @@
-/usr/bin/c++  -arch arm64 -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/spin_sim.dir/main.cpp.o CMakeFiles/spin_sim.dir/spin_model.cpp.o -o spin_sim  /opt/homebrew/Cellar/armadillo/14.4.2/lib/libarmadillo.dylib
